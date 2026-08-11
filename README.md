@@ -6,7 +6,7 @@ Japanese: [README.ja.md](README.ja.md)
   <img src="assets/images/dualkey.jpg" width="700" alt="M5DUALKEY-DeskConsole">
 </p>
 
-M5DUALKEY-DeskConsole is a compact USB HID controller for macOS, built from M5Stack Chain Angle, Encoder, and DualKey modules.
+M5DUALKEY-DeskConsole is a compact USB HID controller for macOS, built from M5Stack Chain DualKey, Encoder, and Angle modules.
 
 It sends standard keyboard, consumer-control, and mouse-wheel events. Audio-output switching is delegated to Raycast (or another macOS automation tool), keeping operating-system-specific work outside the firmware.
 
@@ -20,30 +20,30 @@ It sends standard keyboard, consumer-control, and mouse-wheel events. Audio-outp
 
 ## Hardware
 
-The USB-C connector side is treated as the front of the DualKey module in this project. All left/right references use this viewing direction. From left to right, the official physical layout is Angle, Encoder, then DualKey.
+The orientation with the USB-C port on the rear side is treated as the front in this project. All left/right references use this viewing direction. From left to right, the official physical layout is DualKey, Encoder, then Angle.
 
 ```text
-Front view (USB-C side)
+Front view (USB-C on rear side)
 
 +-----------+-----------+-----------+
-| Angle     | Encoder   | DualKey   |
+| DualKey   | Encoder   | Angle     |
 +-----------+-----------+-----------+
 ```
 
-- M5Stack Chain Angle
-- M5Stack Chain Encoder
 - M5Stack Chain DualKey
+- M5Stack Chain Encoder
+- M5Stack Chain Angle
 - USB connection to macOS
 
 ## Quick Controls
 
 | Module | Control | Action |
 | --- | --- | --- |
-| DualKey | Left | Select Studio Display (`Ctrl + Cmd + 2`) |
-| DualKey | Right | Select ORA4 (`Ctrl + Cmd + 1`) |
+| DualKey | Left | Select ORA4 (`Ctrl + Cmd + 1`), red LED |
+| DualKey | Right | Select Studio Display (`Ctrl + Cmd + 2`), yellow LED |
 | DualKey | Both | Toggle output (`Ctrl + Option + S`) |
-| Encoder | Turn / press | Volume Up, Volume Down, or Mute |
-| Angle | Left / center / right | Scroll Up, stop, or Scroll Down |
+| Encoder | Turn / press | Volume Up, Volume Down, or Mute; purple LED while muted |
+| Angle | Left / center / right | Scroll Up, stop, or Scroll Down; blue activity LED |
 
 Only the three DualKey audio-output actions use Raycast. Encoder volume/mute and Angle scrolling are sent directly to macOS as USB HID events.
 

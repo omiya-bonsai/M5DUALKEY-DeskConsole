@@ -20,7 +20,7 @@ English: [development.md](development.md)
 
 ## LED実装
 
-本プロジェクトでは、USB-Cコネクタ側をDualKeyの正面として扱います。この正面から見た物理チェーンは、左からAngle、Encoder、DualKeyです。DualKey本体の2個のWS2812BはAdafruit NeoPixelで制御し、信号はGPIO 21、電源イネーブルはGPIO 40です。物理的な左キーはpixel 1、右キーはpixel 0に対応します。ChainモジュールLEDは、デバイス探索で得たIDに対してM5Chain 1.0.8の`setRGBLight()`と`setRGBValue()`を使います。輝度はLED状態定義付近の定数にまとめ、LED書き込みは`updateLeds()`へ集約しています。
+本プロジェクトでは、USB-Cポートが背面に来る向きを正面として扱います。この正面から見た物理チェーンは、左からDualKey、Encoder、Angleです。DualKey本体の2個のWS2812BはAdafruit NeoPixelで制御し、信号はGPIO 21、電源イネーブルはGPIO 40です。物理的な左キーはpixel 0、右キーはpixel 1に対応します。ChainモジュールLEDは、デバイス探索で得たIDに対してM5Chain 1.0.8の`setRGBLight()`と`setRGBValue()`を使います。輝度はLED状態定義付近の定数にまとめ、LED書き込みは`updateLeds()`へ集約しています。
 
 ## Angleのキャリブレーションとスクロール
 
@@ -49,4 +49,4 @@ arduino-cli compile \
   M5DUALKEY-DeskConsole
 ```
 
-書き込み前に、選択中のボードパッケージとポートを確認してください。コンパイル成功だけでは、実機のAngle、Encoder、DualKeyチェーンの確認を代替できません。
+書き込み前に、選択中のボードパッケージとポートを確認してください。コンパイル成功だけでは、実機のDualKey、Encoder、Angleチェーンの確認を代替できません。

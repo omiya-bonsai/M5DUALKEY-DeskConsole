@@ -4,17 +4,17 @@ English: [architecture.md](architecture.md)
 
 ## システム全体構成
 
-本プロジェクトでは、USB-Cコネクタ側をDualKeyの正面として扱います。正面から見た正式な物理配置は、左からAngle、Encoder、ESP32-S3搭載のChain DualKeyです。3モジュールをM5Chain UARTデイジーチェーンで接続しています。
+本プロジェクトでは、USB-Cポートが背面に来る向きを正面として扱います。正面から見た正式な物理配置は、左からESP32-S3搭載のChain DualKey、Encoder、Angleです。3モジュールをM5Chain UARTデイジーチェーンで接続しています。
 
 ```text
-正面図（USB-C側）
+正面図（USB-Cは背面側）
 
 +-----------+-----------+-----------+
-| Angle     | Encoder   | DualKey   |
+| DualKey   | Encoder   | Angle     |
 +-----------+-----------+-----------+
 
-Angle -> Encoder -> DualKey (ESP32-S3)
-       M5Chain UARTデイジーチェーン
+DualKey (ESP32-S3) -> Encoder -> Angle
+          M5Chain UARTデイジーチェーン
 ```
 
 ファームウェアはChain IDを固定せず、デバイスタイプからEncoderとAngleを探索します。DualKeyのボタンはESP32-S3で直接読み取ります。Encoderの回転とボタンはUSB HID Consumer Control、AngleはUSB HIDマウスホイールとして送信します。
@@ -54,5 +54,7 @@ Raycastを使用するのはDualKeyのキーボードショートカットだけ
 - **macOS自動化:** DualKeyの3つのオーディオ出力ショートカットだけをファームウェア外のスクリプトへ割り当て
 
 ## LED状態の境界
+
+LEDの固定対応は、DualKey左 = ORA4のBright Red、DualKey右 = Studio DisplayのBright Yellow、Encoder = MuteのBright Purple、Angle = スクロール操作量を示すBright Blueです。選択中の出力表示とミュート表示は1/f風に呼吸し、Angle LEDは正規化した操作量に応じて輝度が変化して停止後にフェードアウトします。
 
 LED状態はM5Stack側で管理します。macOSから状態を取得する経路はないため、OSの確定的な実状態ではありません。macOS、別のキーボード、別アプリから出力先やミュートを変更すると、LED表示と実状態がずれることがあります。状態保持とLED更新を入力処理から分離しているため、将来BLE状態やホストからのフィードバックを追加できます。

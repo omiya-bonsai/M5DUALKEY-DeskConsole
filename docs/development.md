@@ -20,7 +20,7 @@ Board menus vary with the M5Stack package version. Confirm that TinyUSB is selec
 
 ## LED Implementation
 
-The USB-C connector side is treated as the front of the DualKey module. From this front view, the physical chain is Angle, Encoder, then DualKey from left to right. The DualKey contains two WS2812B LEDs controlled with Adafruit NeoPixel on GPIO 21; GPIO 40 enables their power. The physical left key is pixel 1 and the right key is pixel 0. Chain module LEDs use M5Chain 1.0.8 `setRGBLight()` and `setRGBValue()` with IDs found by device discovery. Brightness constants are kept near the LED state definitions, and LED writes are centralized in `updateLeds()`.
+The orientation with the USB-C port on the rear side is treated as the front. From this front view, the physical chain is DualKey, Encoder, then Angle from left to right. The DualKey contains two WS2812B LEDs controlled with Adafruit NeoPixel on GPIO 21; GPIO 40 enables their power. The physical left key is pixel 0 and the right key is pixel 1. Chain module LEDs use M5Chain 1.0.8 `setRGBLight()` and `setRGBValue()` with IDs found by device discovery. Brightness constants are kept near the LED state definitions, and LED writes are centralized in `updateLeds()`.
 
 ## Angle Calibration and Scrolling
 
@@ -49,4 +49,4 @@ arduino-cli compile \
   M5DUALKEY-DeskConsole
 ```
 
-Review the selected board package and port before uploading. Compilation does not replace verification on the physical Angle, Encoder, and DualKey chain.
+Review the selected board package and port before uploading. Compilation does not replace verification on the physical DualKey, Encoder, and Angle chain.

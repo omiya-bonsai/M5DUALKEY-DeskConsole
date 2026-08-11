@@ -6,7 +6,7 @@ English: [README.md](README.md)
   <img src="assets/images/dualkey.jpg" width="700" alt="M5DUALKEY-DeskConsole">
 </p>
 
-M5DUALKEY-DeskConsoleは、M5Stack Chain Angle、Encoder、DualKeyで構成したmacOS向けのコンパクトなUSB HIDコントローラーです。
+M5DUALKEY-DeskConsoleは、M5Stack Chain DualKey、Encoder、Angleで構成したmacOS向けのコンパクトなUSB HIDコントローラーです。
 
 標準のキーボード、Consumer Control、マウスホイールイベントを送信します。オーディオ出力の切り替えはRaycast（または他のmacOS自動化ツール）へ委譲し、OS固有処理をファームウェアから分離しています。
 
@@ -20,30 +20,30 @@ M5DUALKEY-DeskConsoleは、M5Stack Chain Angle、Encoder、DualKeyで構成し�
 
 ## ハードウェア構成
 
-本プロジェクトでは、USB-Cコネクタ側をDualKeyの正面として扱います。左右の表記はすべてこの向きから見たものです。正面から見て左から、Angle、Encoder、DualKeyが正式な物理配置です。
+本プロジェクトでは、USB-Cポートが背面に来る向きを正面として扱います。左右の表記はすべてこの向きから見たものです。正面から見て左から、DualKey、Encoder、Angleが正式な物理配置です。
 
 ```text
-正面図（USB-C側）
+正面図（USB-Cは背面側）
 
 +-----------+-----------+-----------+
-| Angle     | Encoder   | DualKey   |
+| DualKey   | Encoder   | Angle     |
 +-----------+-----------+-----------+
 ```
 
-- M5Stack Chain Angle
-- M5Stack Chain Encoder
 - M5Stack Chain DualKey
+- M5Stack Chain Encoder
+- M5Stack Chain Angle
 - macOSへのUSB接続
 
 ## 簡易操作一覧
 
 | モジュール | 操作 | 動作 |
 | --- | --- | --- |
-| DualKey | 左 | Studio Displayを選択（`Ctrl + Cmd + 2`） |
-| DualKey | 右 | ORA4を選択（`Ctrl + Cmd + 1`） |
+| DualKey | 左 | ORA4を選択（`Ctrl + Cmd + 1`）、LEDは赤 |
+| DualKey | 右 | Studio Displayを選択（`Ctrl + Cmd + 2`）、LEDは黄 |
 | DualKey | 左右同時 | 出力をトグル（`Ctrl + Option + S`） |
-| Encoder | 回転／押し込み | 音量アップ、音量ダウン、ミュート |
-| Angle | 左／中央／右 | 上スクロール、停止、下スクロール |
+| Encoder | 回転／押し込み | 音量アップ、音量ダウン、ミュート。Mute中は紫 |
+| Angle | 左／中央／右 | 上スクロール、停止、下スクロール。操作中は青 |
 
 Raycastを使用するのはDualKeyの3つのオーディオ出力操作だけです。Encoderの音量／ミュートとAngleのスクロールは、USB HIDイベントとしてmacOSへ直接送信されます。
 
