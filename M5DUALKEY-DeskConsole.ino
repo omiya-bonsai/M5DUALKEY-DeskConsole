@@ -523,10 +523,10 @@ void updateDualKey() {
   if (pending != PendingKey::NONE && now - pendingSince >= CHORD_WINDOW_MS) {
 
     if (pending == PendingKey::LEFT && leftPressed) {
-      sendOra4();
+      sendStudioDisplay();
       singleConsumed = true;
     } else if (pending == PendingKey::RIGHT && rightPressed) {
-      sendStudioDisplay();
+      sendOra4();
       singleConsumed = true;
     }
 
@@ -535,14 +535,14 @@ void updateDualKey() {
 
   if (pending == PendingKey::LEFT && Key1.wasReleased()) {
 
-    sendOra4();
+    sendStudioDisplay();
     pending = PendingKey::NONE;
     singleConsumed = true;
   }
 
   if (pending == PendingKey::RIGHT && Key2.wasReleased()) {
 
-    sendStudioDisplay();
+    sendOra4();
     pending = PendingKey::NONE;
     singleConsumed = true;
   }
