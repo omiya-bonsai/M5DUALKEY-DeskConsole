@@ -118,6 +118,17 @@ constexpr float AUDIO_LED_MAX_LEVEL = 0.80f;
 constexpr float MUTE_LED_MIN_LEVEL = 0.45f;
 constexpr float MUTE_LED_MAX_LEVEL = 0.85f;
 
+// Perceptual standby level before gamma correction.
+// gammaCorrect(0.20) produces approximately 2.9% RGB output.
+constexpr float LED_STANDBY_LEVEL = 0.20f;
+
+// Action feedback temporarily overrides the underlying state.
+constexpr float DUALKEY_FLASH_LEVEL = 0.95f;
+constexpr uint32_t DUALKEY_FLASH_DURATION_MS = 80;
+
+constexpr float ENCODER_IMPULSE_PEAK_LEVEL = 1.0f;
+constexpr uint32_t ENCODER_IMPULSE_DECAY_MS = 500;
+
 constexpr float ANGLE_LED_MIN_LEVEL = 0.30f;
 constexpr float ANGLE_LED_ACTIVITY_EXPONENT = 0.7f;
 constexpr uint32_t ANGLE_LED_FADE_MS = 150;
@@ -148,6 +159,14 @@ bool muted = false;
 bool ledsDirty = true;
 
 uint32_t lastLedUpdateMs = 0;
+
+uint32_t dualKeyLeftFlashStartMs = 0;
+uint32_t dualKeyRightFlashStartMs = 0;
+bool dualKeyLeftFlashActive = false;
+bool dualKeyRightFlashActive = false;
+
+uint32_t encoderImpulseStartMs = 0;
+bool encoderImpulseActive = false;
 
 uint8_t lastEncoderLedRgb[3] = { 0, 0, 0 };
 uint8_t lastAngleLedRgb[3] = { 0, 0, 0 };
@@ -345,6 +364,26 @@ void toggleMuteState() {
   ledsDirty = true;
 }
 
+void triggerDualKeyFlash(PendingKey key) {
+  const uint32_t now = millis();
+
+  if (key == PendingKey::LEFT) {
+    dualKeyLeftFlashStartMs = now;
+    dualKeyLeftFlashActive = true;
+  } else if (key == PendingKey::RIGHT) {
+    dualKeyRightFlashStartMs = now;
+    dualKeyRightFlashActive = true;
+  }
+
+  ledsDirty = true;
+}
+
+void triggerEncoderImpulse() {
+  encoderImpulseStartMs = millis();
+  encoderImpulseActive = true;
+  ledsDirty = true;
+}
+
 bool rgbNeedsUpdate(
   uint8_t r,
   uint8_t g,
@@ -431,6 +470,8 @@ uint8_t scaleBootChannel(
   float level) {
   return (uint8_t)(channel * level);
 }
+
+float gammaCorrect(float x);
 
 
 void playBootLedAnimation() {
@@ -534,6 +575,9 @@ void playBootLedAnimation() {
   // Smooth fade-out
   // ----------------------------------------------------------
 
+  const float standbyOutputLevel =
+    gammaCorrect(LED_STANDBY_LEVEL);
+
   for (int step = BOOT_FADE_STEPS;
        step >= 0;
        --step) {
@@ -545,49 +589,46 @@ void playBootLedAnimation() {
     const float corrected =
       powf(level, 1.8f);
 
+    const float outputLevel =
+      standbyOutputLevel +
+      (1.0f - standbyOutputLevel) * corrected;
+
     DualKeyLeds.setPixelColor(
       DUALKEY_LEFT_LED_INDEX,
       DualKeyLeds.Color(
-        scaleBootChannel(ORA4_R, corrected),
-        scaleBootChannel(ORA4_G, corrected),
-        scaleBootChannel(ORA4_B, corrected)));
+        scaleBootChannel(ORA4_R, outputLevel),
+        scaleBootChannel(ORA4_G, outputLevel),
+        scaleBootChannel(ORA4_B, outputLevel)));
 
     DualKeyLeds.setPixelColor(
       DUALKEY_RIGHT_LED_INDEX,
       DualKeyLeds.Color(
-        scaleBootChannel(STUDIO_R, corrected),
-        scaleBootChannel(STUDIO_G, corrected),
-        scaleBootChannel(STUDIO_B, corrected)));
+        scaleBootChannel(STUDIO_R, outputLevel),
+        scaleBootChannel(STUDIO_G, outputLevel),
+        scaleBootChannel(STUDIO_B, outputLevel)));
 
     DualKeyLeds.show();
 
     setEncoderRgb(
-      scaleBootChannel(MUTE_R, corrected),
-      scaleBootChannel(MUTE_G, corrected),
-      scaleBootChannel(MUTE_B, corrected));
+      scaleBootChannel(MUTE_R, outputLevel),
+      scaleBootChannel(MUTE_G, outputLevel),
+      scaleBootChannel(MUTE_B, outputLevel));
 
     setAngleRgb(
-      scaleBootChannel(ANGLE_R, corrected),
-      scaleBootChannel(ANGLE_G, corrected),
-      scaleBootChannel(ANGLE_B, corrected));
+      scaleBootChannel(ANGLE_R, outputLevel),
+      scaleBootChannel(ANGLE_G, outputLevel),
+      scaleBootChannel(ANGLE_B, outputLevel));
 
     delay(BOOT_FADE_STEP_MS);
   }
 
   // ----------------------------------------------------------
-  // End boot animation completely dark.
-  //
-  // Audio output is UNKNOWN at boot, so we must not pretend
-  // ORA4 or Studio Display is selected.
+  // End boot animation at the four-color standby level.
+  // Audio output remains UNKNOWN, so neither DualKey LED is
+  // rendered as active until a direct selection is made.
   // ----------------------------------------------------------
 
-  DualKeyLeds.clear();
-  DualKeyLeds.show();
-
-  setEncoderRgb(0, 0, 0);
-  setAngleRgb(0, 0, 0);
-
-  angleLedLevel = 0.0f;
+  angleLedLevel = LED_STANDBY_LEVEL;
   angleLedFading = false;
 
   ledsDirty = true;
@@ -704,24 +745,45 @@ void scaleRgb(
 void updateDualKeyLeds(uint32_t nowMs) {
   DualKeyLeds.clear();
 
-  if (currentAudioOutput == AudioOutput::UNKNOWN) {
-    DualKeyLeds.show();
-    return;
-  }
-
-  const float level =
-    getAudioLedLevel(nowMs);
-
   uint8_t r = 0;
   uint8_t g = 0;
   uint8_t b = 0;
+
+  scaleRgb(
+    ORA4_R,
+    ORA4_G,
+    ORA4_B,
+    LED_STANDBY_LEVEL,
+    r,
+    g,
+    b);
+
+  DualKeyLeds.setPixelColor(
+    DUALKEY_LEFT_LED_INDEX,
+    DualKeyLeds.Color(r, g, b));
+
+  scaleRgb(
+    STUDIO_R,
+    STUDIO_G,
+    STUDIO_B,
+    LED_STANDBY_LEVEL,
+    r,
+    g,
+    b);
+
+  DualKeyLeds.setPixelColor(
+    DUALKEY_RIGHT_LED_INDEX,
+    DualKeyLeds.Color(r, g, b));
+
+  const float activeLevel =
+    getAudioLedLevel(nowMs);
 
   if (currentAudioOutput == AudioOutput::ORA4) {
     scaleRgb(
       ORA4_R,
       ORA4_G,
       ORA4_B,
-      level,
+      activeLevel,
       r,
       g,
       b);
@@ -734,7 +796,7 @@ void updateDualKeyLeds(uint32_t nowMs) {
       STUDIO_R,
       STUDIO_G,
       STUDIO_B,
-      level,
+      activeLevel,
       r,
       g,
       b);
@@ -742,6 +804,45 @@ void updateDualKeyLeds(uint32_t nowMs) {
     DualKeyLeds.setPixelColor(
       DUALKEY_RIGHT_LED_INDEX,
       DualKeyLeds.Color(r, g, b));
+  }
+
+  // Action overrides State while the short key flash is active.
+  if (dualKeyLeftFlashActive) {
+    if (nowMs - dualKeyLeftFlashStartMs < DUALKEY_FLASH_DURATION_MS) {
+      scaleRgb(
+        ORA4_R,
+        ORA4_G,
+        ORA4_B,
+        DUALKEY_FLASH_LEVEL,
+        r,
+        g,
+        b);
+
+      DualKeyLeds.setPixelColor(
+        DUALKEY_LEFT_LED_INDEX,
+        DualKeyLeds.Color(r, g, b));
+    } else {
+      dualKeyLeftFlashActive = false;
+    }
+  }
+
+  if (dualKeyRightFlashActive) {
+    if (nowMs - dualKeyRightFlashStartMs < DUALKEY_FLASH_DURATION_MS) {
+      scaleRgb(
+        STUDIO_R,
+        STUDIO_G,
+        STUDIO_B,
+        DUALKEY_FLASH_LEVEL,
+        r,
+        g,
+        b);
+
+      DualKeyLeds.setPixelColor(
+        DUALKEY_RIGHT_LED_INDEX,
+        DualKeyLeds.Color(r, g, b));
+    } else {
+      dualKeyRightFlashActive = false;
+    }
   }
 
   DualKeyLeds.show();
@@ -757,25 +858,51 @@ void updateEncoderLed(uint32_t nowMs) {
     return;
   }
 
+  float stateLevel = LED_STANDBY_LEVEL;
+
+  if (muted) {
+    stateLevel = getMuteLedLevel(nowMs);
+  }
+
+  float outputLevel = stateLevel;
+
+  // Action overrides State. Each rotation restarts this decay.
+  if (encoderImpulseActive) {
+    const uint32_t elapsed =
+      nowMs - encoderImpulseStartMs;
+
+    if (elapsed < ENCODER_IMPULSE_DECAY_MS) {
+      const float progress =
+        (float)elapsed / (float)ENCODER_IMPULSE_DECAY_MS;
+
+      const float remaining =
+        1.0f - progress;
+
+      const float decay =
+        remaining * remaining;
+
+      outputLevel =
+        stateLevel +
+        (ENCODER_IMPULSE_PEAK_LEVEL - stateLevel) * decay;
+    } else {
+      encoderImpulseActive = false;
+    }
+  }
+
   uint8_t encoderRgb[3] = {
     0,
     0,
     0
   };
 
-  if (muted) {
-    const float level =
-      getMuteLedLevel(nowMs);
-
-    scaleRgb(
-      MUTE_R,
-      MUTE_G,
-      MUTE_B,
-      level,
-      encoderRgb[0],
-      encoderRgb[1],
-      encoderRgb[2]);
-  }
+  scaleRgb(
+    MUTE_R,
+    MUTE_G,
+    MUTE_B,
+    outputLevel,
+    encoderRgb[0],
+    encoderRgb[1],
+    encoderRgb[2]);
 
   setEncoderRgb(
     encoderRgb[0],
@@ -793,7 +920,7 @@ void updateAngleLed(uint32_t nowMs) {
     return;
   }
 
-  float targetLevel = 0.0f;
+  float targetLevel = LED_STANDBY_LEVEL;
 
   if (scrollState != ScrollState::STOPPED) {
     angleLedFading = false;
@@ -805,7 +932,7 @@ void updateAngleLed(uint32_t nowMs) {
 
     targetLevel =
       ANGLE_LED_MIN_LEVEL + (1.0f - ANGLE_LED_MIN_LEVEL) * activityCurve;
-  } else if (angleLedLevel > 0.0f) {
+  } else if (angleLedLevel > LED_STANDBY_LEVEL) {
     if (!angleLedFading) {
       angleLedFading = true;
       angleFadeStartMs = nowMs;
@@ -820,7 +947,9 @@ void updateAngleLed(uint32_t nowMs) {
         (float)fadeElapsed / (float)ANGLE_LED_FADE_MS;
 
       targetLevel =
-        angleFadeStartLevel * (1.0f - fadeProgress);
+        LED_STANDBY_LEVEL +
+        (angleFadeStartLevel - LED_STANDBY_LEVEL) *
+          (1.0f - fadeProgress);
     } else {
       angleLedFading = false;
     }
@@ -1233,6 +1362,14 @@ void updateDualKey() {
   const bool leftPressed = Key1.isPressed();
   const bool rightPressed = Key2.isPressed();
 
+  if (Key1.wasPressed()) {
+    triggerDualKeyFlash(PendingKey::LEFT);
+  }
+
+  if (Key2.wasPressed()) {
+    triggerDualKeyFlash(PendingKey::RIGHT);
+  }
+
   // 両押し最優先
   if (leftPressed && rightPressed) {
     if (!chordConsumed) {
@@ -1332,9 +1469,11 @@ void updateEncoder() {
 
     if (delta > 0) {
       volumeUp();
+      triggerEncoderImpulse();
       lastEncoderValue = currentValue;
     } else if (delta < 0) {
       volumeDown();
+      triggerEncoderImpulse();
       lastEncoderValue = currentValue;
     }
   }
