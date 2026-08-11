@@ -1,173 +1,69 @@
 # M5DUALKEY-DeskConsole
 
-🇺🇸 **English:** [README.md](README.md)
+English: [README.md](README.md)
 
 <p align="center">
   <img src="assets/images/dualkey.jpg" width="700" alt="M5DUALKEY-DeskConsole">
 </p>
 
-M5Stack Chainシリーズを利用した、macOS向けUSB HIDデスクトップコントローラーです。
+M5DUALKEY-DeskConsoleは、M5Stack Chain Angle、Encoder、DualKeyで構成したmacOS向けのコンパクトなUSB HIDコントローラーです。
 
-OS依存の処理をファームウェアへ組み込むのではなく、USB HIDでショートカットキーを送信し、Raycastなどのデスクトップツールへ処理を委譲することを目的としています。
+標準のキーボード、Consumer Control、マウスホイールイベントを送信します。オーディオ出力の切り替えはRaycast（または他のmacOS自動化ツール）へ委譲し、OS固有処理をファームウェアから分離しています。
 
----
+## 主な特徴
 
-## 特徴
+- オーディオ出力の選択・トグル用ショートカット
+- ハードウェアによる音量・ミュート操作
+- 起動時キャリブレーションとヒステリシスを備えたオートスクロール
+- オーディオ出力とミュートを示す控えめなRGB状態表示
+- Chain EncoderとAngleの自動探索
 
-- スピーカー出力切り替え
-- スピーカー出力トグル
-- 音量調整
-- ミュート
-- ハンズフリーオートスクロール
-- Angleの自動センターキャリブレーション
+## ハードウェア構成
 
----
-
-## 使用ハードウェア
-
-- M5Stack Chain DualKey (ESP32-S3)
-- M5Stack Chain Encoder
-- M5Stack Chain Angle
-
-現在の接続レイアウト
+本プロジェクトでは、USB-Cコネクタ側をDualKeyの正面として扱います。左右の表記はすべてこの向きから見たものです。正面から見て左から、Angle、Encoder、DualKeyが正式な物理配置です。
 
 ```text
+正面図（USB-C側）
+
 +-----------+-----------+-----------+
-| DualKey   | Encoder   | Angle     |
+| Angle     | Encoder   | DualKey   |
 +-----------+-----------+-----------+
 ```
 
----
+- M5Stack Chain Angle
+- M5Stack Chain Encoder
+- M5Stack Chain DualKey
+- macOSへのUSB接続
 
-## 操作一覧
+## 簡易操作一覧
 
 | モジュール | 操作 | 動作 |
-|------------|------|------|
-| DualKey | 左キー | `Ctrl + Cmd + 1` を送信 |
-| DualKey | 右キー | `Ctrl + Cmd + 2` を送信 |
-| DualKey | 左右同時押し | `Ctrl + Option + S` を送信 |
-| Encoder | 時計回り | 音量アップ |
-| Encoder | 反時計回り | 音量ダウン |
-| Encoder | 押し込み | ミュート切り替え |
-| Angle | 左へ回す | 上方向へオートスクロール |
-| Angle | 中央 | スクロール停止 |
-| Angle | 右へ回す | 下方向へオートスクロール |
+| --- | --- | --- |
+| DualKey | 左 | Studio Displayを選択（`Ctrl + Cmd + 2`） |
+| DualKey | 右 | ORA4を選択（`Ctrl + Cmd + 1`） |
+| DualKey | 左右同時 | 出力をトグル（`Ctrl + Option + S`） |
+| Encoder | 回転／押し込み | 音量アップ、音量ダウン、ミュート |
+| Angle | 左／中央／右 | 上スクロール、停止、下スクロール |
 
----
+Raycastを使用するのはDualKeyの3つのオーディオ出力操作だけです。Encoderの音量／ミュートとAngleのスクロールは、USB HIDイベントとしてmacOSへ直接送信されます。
 
-## システム構成
+LEDはmacOSから取得した実状態ではなく、ファームウェア内の状態を表示します。起動時の挙動と制約は[操作とLED表示](docs/controls.ja.md)を参照してください。
 
-本ファームウェアは、スピーカー切り替えなどのOS依存処理を実装していません。
+## 詳細ドキュメント
 
-USB HID経由でショートカットキーを送信し、その後の処理をRaycastへ委譲しています。
+- [アーキテクチャ](docs/architecture.ja.md)
+- [操作とLED表示](docs/controls.ja.md)
+- [Raycast連携](docs/raycast.ja.md)
+- [開発環境とビルド設定](docs/development.ja.md)
 
-```text
-M5DUALKEY-DeskConsole
-          │
-          ▼
-       USB HID
-          │
-          ▼
-        macOS
-          │
-          ▼
-       Raycast
-          │
-          ▼
- AppleScript / Shell Script
-          │
-          ▼
- スピーカー切り替え
-```
+## Project Status
 
-この構成により、
-
-- ファームウェアはシンプルに保てる
-- macOS側の処理だけ自由に変更できる
-- ESP32を書き換えなくても操作内容を変更できる
-
-というメリットがあります。
-
----
-
-## Raycastとの連携
-
-現在はRaycastへ以下のショートカットキーを登録しています。
-
-| ショートカット | 動作 |
-|---------------|------|
-| Ctrl + Cmd + 1 | ORA4へ切り替え |
-| Ctrl + Cmd + 2 | Studio Displayへ切り替え |
-| Ctrl + Option + S | オーディオ出力トグル |
-| Consumer Control | 音量調整 |
-| Consumer Control | ミュート |
-
-スピーカー切り替えの実際の処理は、RaycastからAppleScriptやShell Scriptを実行しています。
-
-同様の構成は、
-
-- BetterTouchTool
-- Keyboard Maestro
-- Hammerspoon
-- Karabiner-Elements
-
-などにも応用できます。
-
----
-
-## オートスクロール
-
-Angleモジュールをスプリングセンター付きのスロットルとして利用しています。
-
-- 左へ回すと上方向へスクロール
-- 右へ回すと下方向へスクロール
-- 中央へ戻すと停止
-- 中央から離れるほど滑らかに加速します
-- 起動時に自動でセンター位置をキャリブレーションします
-
----
-
-## 開発環境
-
-- Arduino IDE
-- ESP32 Arduino Core (M5Stack)
-
-使用ライブラリ
-
-- M5Unified
-- M5Chain
-- USB HID
-
----
-
-## 開発状況
-
-実装済み
-
-- ✅ USB HID Keyboard
-- ✅ USB HID Consumer Control
-- ✅ DualKey
-- ✅ Encoder
-- ✅ Angle Auto Scroll
-- ✅ 自動キャリブレーション
-
-今後の予定
-
-- ⏳ RGB LED表示
-- ⏳ BLE HID対応
-
----
+USB HID Keyboard、Consumer Control、Angleオートスクロール、起動時キャリブレーション、RGB状態表示を実装済みです。BLE HIDは今後実装予定です。
 
 ## ライセンス
 
-MIT License
-
-詳細は [LICENSE](LICENSE) を参照してください。
-
----
+MIT License。詳細は[LICENSE](LICENSE)を参照してください。
 
 ## Maintainer
 
-**omiya-bonsai**
-
-https://github.com/omiya-bonsai
+omiya-bonsai

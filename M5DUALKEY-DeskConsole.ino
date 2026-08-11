@@ -4,6 +4,7 @@
 #include "M5Unified.h"
 #include "M5Chain.h"
 #include "USBHIDMouse.h"
+#include <Adafruit_NeoPixel.h>
 #include <math.h>
 
 // ============================================================
@@ -52,6 +53,36 @@ uint8_t opr_status = 0;
 
 uint8_t encoder_id = 0;
 uint8_t angle_id = 0;
+
+
+// ============================================================
+// LED state
+// ============================================================
+
+constexpr uint8_t DUALKEY_LED_POWER_PIN = 40;
+constexpr uint8_t DUALKEY_LED_SIGNAL_PIN = 21;
+constexpr uint8_t DUALKEY_LED_COUNT = 2;
+constexpr uint8_t DUALKEY_LEFT_LED_INDEX = 1;
+constexpr uint8_t DUALKEY_RIGHT_LED_INDEX = 0;
+
+// 20% brightness for LEDs that remain lit as status indicators.
+constexpr uint8_t DUALKEY_LED_BRIGHTNESS = 51;
+constexpr uint8_t CHAIN_LED_BRIGHTNESS = 20;
+
+Adafruit_NeoPixel DualKeyLeds(
+  DUALKEY_LED_COUNT,
+  DUALKEY_LED_SIGNAL_PIN,
+  NEO_GRB + NEO_KHZ800);
+
+enum class AudioOutput {
+  UNKNOWN,
+  STUDIO_DISPLAY,
+  ORA4
+};
+
+AudioOutput currentAudioOutput = AudioOutput::UNKNOWN;
+bool muted = false;
+bool ledsDirty = true;
 
 
 // ============================================================
@@ -196,6 +227,109 @@ void toggleMute() {
   ConsumerControl.press(CONSUMER_CONTROL_MUTE);
   delay(5);
   ConsumerControl.release();
+}
+
+
+// ============================================================
+// LED control
+// ============================================================
+
+void setAudioOutputState(AudioOutput output) {
+  currentAudioOutput = output;
+  ledsDirty = true;
+}
+
+void toggleAudioOutputState() {
+  if (currentAudioOutput == AudioOutput::STUDIO_DISPLAY) {
+    setAudioOutputState(AudioOutput::ORA4);
+  } else if (currentAudioOutput == AudioOutput::ORA4) {
+    setAudioOutputState(AudioOutput::STUDIO_DISPLAY);
+  }
+}
+
+void toggleMuteState() {
+  muted = !muted;
+  ledsDirty = true;
+}
+
+void initLeds() {
+  pinMode(DUALKEY_LED_POWER_PIN, OUTPUT);
+  digitalWrite(DUALKEY_LED_POWER_PIN, HIGH);
+
+  DualKeyLeds.begin();
+  DualKeyLeds.setBrightness(DUALKEY_LED_BRIGHTNESS);
+  DualKeyLeds.clear();
+  DualKeyLeds.show();
+}
+
+void initChainLeds() {
+  uint8_t off[3] = {0, 0, 0};
+
+  if (encoder_id != 0) {
+    M5Chain.setRGBLight(
+      encoder_id,
+      CHAIN_LED_BRIGHTNESS,
+      &opr_status);
+    M5Chain.setRGBValue(
+      encoder_id,
+      0,
+      1,
+      off,
+      sizeof(off),
+      &opr_status);
+  }
+
+  if (angle_id != 0) {
+    M5Chain.setRGBLight(
+      angle_id,
+      CHAIN_LED_BRIGHTNESS,
+      &opr_status);
+    M5Chain.setRGBValue(
+      angle_id,
+      0,
+      1,
+      off,
+      sizeof(off),
+      &opr_status);
+  }
+}
+
+void updateLeds() {
+  if (!ledsDirty) {
+    return;
+  }
+
+  DualKeyLeds.clear();
+
+  if (currentAudioOutput == AudioOutput::STUDIO_DISPLAY) {
+    DualKeyLeds.setPixelColor(
+      DUALKEY_LEFT_LED_INDEX,
+      DualKeyLeds.Color(255, 255, 255));
+  } else if (currentAudioOutput == AudioOutput::ORA4) {
+    DualKeyLeds.setPixelColor(
+      DUALKEY_RIGHT_LED_INDEX,
+      DualKeyLeds.Color(0, 0, 255));
+  }
+
+  DualKeyLeds.show();
+
+  if (encoder_id != 0) {
+    uint8_t encoderRgb[3] = {
+      (uint8_t)(muted ? 255 : 0),
+      0,
+      0
+    };
+
+    M5Chain.setRGBValue(
+      encoder_id,
+      0,
+      1,
+      encoderRgb,
+      sizeof(encoderRgb),
+      &opr_status);
+  }
+
+  ledsDirty = false;
 }
 
 
@@ -463,7 +597,10 @@ void setup() {
   Mouse.begin();
   USB.begin();
 
+  initLeds();
   initChainDevices();
+  initChainLeds();
+  updateLeds();
 
   // 起動時はAngleを物理的な中央位置に置いておく
   calibrateAngleCenter();
@@ -489,6 +626,7 @@ void updateDualKey() {
       pending = PendingKey::NONE;
 
       sendAudioToggle();
+      toggleAudioOutputState();
 
       chordConsumed = true;
       singleConsumed = false;
@@ -524,9 +662,11 @@ void updateDualKey() {
 
     if (pending == PendingKey::LEFT && leftPressed) {
       sendStudioDisplay();
+      setAudioOutputState(AudioOutput::STUDIO_DISPLAY);
       singleConsumed = true;
     } else if (pending == PendingKey::RIGHT && rightPressed) {
       sendOra4();
+      setAudioOutputState(AudioOutput::ORA4);
       singleConsumed = true;
     }
 
@@ -536,6 +676,7 @@ void updateDualKey() {
   if (pending == PendingKey::LEFT && Key1.wasReleased()) {
 
     sendStudioDisplay();
+    setAudioOutputState(AudioOutput::STUDIO_DISPLAY);
     pending = PendingKey::NONE;
     singleConsumed = true;
   }
@@ -543,6 +684,7 @@ void updateDualKey() {
   if (pending == PendingKey::RIGHT && Key2.wasReleased()) {
 
     sendOra4();
+    setAudioOutputState(AudioOutput::ORA4);
     pending = PendingKey::NONE;
     singleConsumed = true;
   }
@@ -606,6 +748,7 @@ void updateEncoder() {
 
     if (pressed) {
       toggleMute();
+      toggleMuteState();
     }
 
     lastEncoderButton = pressed;
@@ -621,6 +764,7 @@ void loop() {
   updateDualKey();
   updateEncoder();
   updateAngle();
+  updateLeds();
 
   delay(2);
 }

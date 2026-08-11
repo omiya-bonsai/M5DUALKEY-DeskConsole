@@ -1,165 +1,69 @@
 # M5DUALKEY-DeskConsole
 
-🇯🇵 **日本語:** [README.ja.md](README.ja.md)
+Japanese: [README.ja.md](README.ja.md)
 
 <p align="center">
   <img src="assets/images/dualkey.jpg" width="700" alt="M5DUALKEY-DeskConsole">
 </p>
 
-A compact USB HID desktop controller built with M5Stack Chain modules for macOS.
+M5DUALKEY-DeskConsole is a compact USB HID controller for macOS, built from M5Stack Chain Angle, Encoder, and DualKey modules.
 
-Instead of implementing operating-system-specific functions in firmware, this project sends standard USB HID events and delegates application-specific actions to tools such as Raycast.
-
----
+It sends standard keyboard, consumer-control, and mouse-wheel events. Audio-output switching is delegated to Raycast (or another macOS automation tool), keeping operating-system-specific work outside the firmware.
 
 ## Features
 
-- Audio output device selection
-- Audio output toggle
-- Hardware volume control
-- Hardware mute
-- Hands-free auto scrolling
-- Automatic Angle center calibration
-
----
+- One-touch audio-output selection and toggle shortcuts
+- Hardware volume and mute control
+- Spring-centered auto-scroll with startup calibration and hysteresis
+- Low-brightness RGB status indicators for audio output and mute
+- Automatic discovery of Chain Encoder and Angle modules
 
 ## Hardware
 
-- M5Stack Chain DualKey (ESP32-S3)
-- M5Stack Chain Encoder
+The USB-C connector side is treated as the front of the DualKey module in this project. All left/right references use this viewing direction. From left to right, the official physical layout is Angle, Encoder, then DualKey.
+
+```text
+Front view (USB-C side)
+
++-----------+-----------+-----------+
+| Angle     | Encoder   | DualKey   |
++-----------+-----------+-----------+
+```
+
 - M5Stack Chain Angle
+- M5Stack Chain Encoder
+- M5Stack Chain DualKey
+- USB connection to macOS
 
-Current layout:
+## Quick Controls
 
-```text
-+-----------+-----------+-----------+
-| DualKey   | Encoder   | Angle     |
-+-----------+-----------+-----------+
-```
+| Module | Control | Action |
+| --- | --- | --- |
+| DualKey | Left | Select Studio Display (`Ctrl + Cmd + 2`) |
+| DualKey | Right | Select ORA4 (`Ctrl + Cmd + 1`) |
+| DualKey | Both | Toggle output (`Ctrl + Option + S`) |
+| Encoder | Turn / press | Volume Up, Volume Down, or Mute |
+| Angle | Left / center / right | Scroll Up, stop, or Scroll Down |
 
----
+Only the three DualKey audio-output actions use Raycast. Encoder volume/mute and Angle scrolling are sent directly to macOS as USB HID events.
 
-## Controls
+The LEDs represent firmware-maintained state, not state read back from macOS. See [Controls](docs/controls.md) for startup behavior and limitations.
 
-| Module | Operation | Function |
-|---------|-----------|----------|
-| DualKey | Left key | Send `Ctrl + Cmd + 1` |
-| DualKey | Right key | Send `Ctrl + Cmd + 2` |
-| DualKey | Both keys | Send `Ctrl + Option + S` |
-| Encoder | Clockwise | Volume Up |
-| Encoder | Counter-clockwise | Volume Down |
-| Encoder | Press | Mute / Unmute |
-| Angle | Rotate Left | Auto-scroll Up |
-| Angle | Center | Stop scrolling |
-| Angle | Rotate Right | Auto-scroll Down |
+## Detailed Documentation
 
----
-
-## Software Architecture
-
-The firmware itself does **not** directly switch audio devices.
-
-Instead, it sends keyboard shortcuts via USB HID.
-
-```text
-M5DUALKEY-DeskConsole
-          │
-          ▼
-      USB HID
-          │
-          ▼
-      macOS
-          │
-          ▼
-      Raycast
-          │
-          ▼
- AppleScript / Shell Script
-          │
-          ▼
- Audio Output Switching
-```
-
-This design keeps the firmware simple and hardware-focused while allowing the desktop workflow to be customized without modifying the firmware.
-
----
-
-## Raycast Integration
-
-The current setup uses the following shortcuts.
-
-| Shortcut | Action |
-|----------|--------|
-| Ctrl + Cmd + 1 | Switch audio output to ORA4 |
-| Ctrl + Cmd + 2 | Switch audio output to Studio Display |
-| Ctrl + Option + S | Toggle audio output |
-| Consumer Control | Volume Up / Down |
-| Consumer Control | Mute |
-
-These shortcuts are mapped to Raycast commands, which execute AppleScript or shell scripts on macOS.
-
-The firmware can also be integrated with other automation tools such as:
-
-- BetterTouchTool
-- Keyboard Maestro
-- Hammerspoon
-- Karabiner-Elements
-
----
-
-## Auto Scroll
-
-The Chain Angle module behaves like a spring-centered throttle.
-
-- Rotate left to scroll upward.
-- Rotate right to scroll downward.
-- Return to center to stop.
-- Scrolling speed increases smoothly as the knob moves farther from the center.
-- The firmware automatically calibrates the center position during startup.
-
----
-
-## Development Environment
-
-- Arduino IDE
-- ESP32 Arduino Core (M5Stack)
-
-Libraries
-
-- M5Unified
-- M5Chain
-- USB HID
-
----
+- [Architecture](docs/architecture.md)
+- [Controls and LED behavior](docs/controls.md)
+- [Raycast integration](docs/raycast.md)
+- [Development and build settings](docs/development.md)
 
 ## Project Status
 
-Implemented
-
-- ✅ USB HID keyboard
-- ✅ USB HID consumer control
-- ✅ DualKey support
-- ✅ Encoder support
-- ✅ Angle auto-scroll
-- ✅ Automatic Angle calibration
-
-Planned
-
-- ⏳ RGB LED feedback
-- ⏳ BLE HID support
-
----
+USB HID keyboard, consumer control, Angle auto-scroll, startup calibration, and RGB status indicators are implemented. BLE HID is planned.
 
 ## License
 
-This project is licensed under the MIT License.
-
-See [LICENSE](LICENSE) for details.
-
----
+MIT License. See [LICENSE](LICENSE).
 
 ## Maintainer
 
-**omiya-bonsai**
-
-https://github.com/omiya-bonsai
+omiya-bonsai
